@@ -12,27 +12,28 @@ type KafkaService interface {
 }
 
 type kafkaObject struct {
-	writer *kafka.Writer
-	reader *kafka.Reader
+	address []string
+	topic   string
+	groupid string
+	writer  *kafka.Writer
+	reader  *kafka.Reader
 }
 
-func New(topic string, address ...string) KafkaService {
+func New(topic, groupid string, address ...string) KafkaService {
 	return &kafkaObject{
-		writer: &kafka.Writer{
-			Addr:     kafka.TCP(address...),
-			Topic:    topic,
-			Balancer: &kafka.LeastBytes{},
-		},
-		reader: kafka.NewReader(kafka.ReaderConfig{
-			Brokers:   address,
-			Topic:     topic,
-			Partition: 0,
-			MaxBytes:  10e6, // 10MB
-		}),
+		address: address,
+		topic:   topic,
+		groupid: groupid,
 	}
 }
 
 func (k *kafkaObject) Write(ctx context.Context, key, value string) error {
+	k.writer = &kafka.Writer{
+		Addr:     kafka.TCP(k.address...),
+		Topic:    k.topic,
+		Balancer: &kafka.LeastBytes{},
+	}
+
 	err := k.writer.WriteMessages(ctx,
 		kafka.Message{
 			Key:   []byte(key),
@@ -40,14 +41,25 @@ func (k *kafkaObject) Write(ctx context.Context, key, value string) error {
 		},
 	)
 
+	k.writer.Close()
+
 	return err
 }
 
 func (k *kafkaObject) Read(ctx context.Context) (string, error) {
+	k.reader = kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  k.address,
+		Topic:    k.topic,
+		GroupID:  k.groupid,
+		MaxBytes: 10e6, // 10MB
+	})
+
 	m, err := k.reader.ReadMessage(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	return string(m.Value), nil
+	k.reader.Close()
+
+	return string(m.Key) + "-" + string(m.Value), nil
 }

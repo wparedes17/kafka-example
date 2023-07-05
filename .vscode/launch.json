@@ -13,6 +13,7 @@
             "env": {
                 "KAFKA_BROKERS": "localhost:9092",
                 "KAFKA_TOPIC": "jacobolandia",
+                "KAFKA_GROUP": "jacobos",
             },
         }
     ]

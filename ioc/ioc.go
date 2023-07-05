@@ -31,7 +31,7 @@ func Create() container {
 	c.httpClient = http.DefaultClient
 
 	log.Println("Initializing Kafka Service")
-	c.kafkaService = kafkaservice.New(kafkaTopic, kafkaBrokers...)
+	c.kafkaService = kafkaservice.New(kafkaTopic, kafkaGroup, kafkaBrokers...)
 
 	log.Println("Done initializing singletons!")
 	return c
